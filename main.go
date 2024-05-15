@@ -40,6 +40,27 @@ type Blockchain struct {
 
 var Blockchain *Blockchain
 
+func (bc *Blockchain) AddBlock(data BookCheckout) {
+	prevBlock := bc.blocks[len(bc.blocks)-1]
+	block := CreateBlock(prevBlock, data)
+
+	if validBlock(block, prevBlock) {
+		bc.blocks = append(bc.blocks, block)
+	}
+}
+
+func writeBlock(w http.ResponseWriter, r *http.Request) {
+	var checkoutItem BookCheckout
+
+	if err := json.NewDecoder(r.Body).Decode(&checkoutItem); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("could not write block: %v", err)
+		w.Write([]byte("could not write block"))
+	}
+
+	Blockchain.AddBlock(checkoutItem)
+}
+
 func newBook(w http.ResponseWriter, r *http.Request) {
 	var book Book
 
