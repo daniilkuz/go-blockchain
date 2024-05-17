@@ -41,7 +41,7 @@ type Blockchain struct {
 	blocks []*Block
 }
 
-var Blockchain *Blockchain
+var BlockChain *Blockchain
 
 func (b *Block) generateHash() {
 	bytes, _ := json.Marshal(b.Data)
@@ -70,6 +70,27 @@ func (bc *Blockchain) AddBlock(data BookCheckout) {
 	}
 }
 
+func validBlock(block, prevBlock *Block) bool {
+	if prevBlock.Hash != block.PrevHash {
+		return false
+	}
+	if !block.validateHash(block.Hash) {
+		return false
+	}
+	if prevBlock.Position+1 != block.Position {
+		return false
+	}
+	return true
+}
+
+func (b *Block) validateHash(hash string) bool {
+	b.generateHash()
+	if b.Hash != hash {
+		return false
+	}
+	return true
+}
+
 func writeBlock(w http.ResponseWriter, r *http.Request) {
 	var checkoutItem BookCheckout
 
@@ -79,7 +100,7 @@ func writeBlock(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("could not write block"))
 	}
 
-	Blockchain.AddBlock(checkoutItem)
+	BlockChain.AddBlock(checkoutItem)
 }
 
 func newBook(w http.ResponseWriter, r *http.Request) {
@@ -116,12 +137,20 @@ func NewBlockchain() *Blockchain {
 }
 
 func main() {
-	Blockchain = NewBlockchain()
+	BlockChain = NewBlockchain()
 	r := mux.NewRouter()
 	r.HandleFunc("/", getBlockchain).Methods("GET")
 	r.HandleFunc("/", writeBlock).Methods("POST")
 	r.HandleFunc("/new", newBook).Methods("POST")
-
+	go func() {
+		for _, block := range BlockChain.blocks {
+			fmt.Printf("Prev. hash: %x\n", block.PrevHash)
+			bytes, _ := json.MarshalIndent(block.Data, "", " ")
+			fmt.Printf("Data: %v\n", string(bytes))
+			fmt.Printf("Hash: %x\n", block.Hash)
+			fmt.Println()
+		}
+	}()
 	log.Println("Listening on port 3000")
 	log.Fatal(http.ListenAndServe(":3000", r))
 }
