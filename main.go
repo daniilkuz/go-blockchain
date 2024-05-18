@@ -136,6 +136,16 @@ func NewBlockchain() *Blockchain {
 	return &Blockchain{[]*Block{GenesisBlock()}}
 }
 
+func getBlockchain(w http.ResponseWriter, r *http.Request) {
+	jbytes, err := json.MarshalIndent(BlockChain.blocks, "", " ")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(err)
+		return
+	}
+	io.WriteString(w, string(jbytes))
+}
+
 func main() {
 	BlockChain = NewBlockchain()
 	r := mux.NewRouter()
